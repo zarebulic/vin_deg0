@@ -130,7 +130,7 @@ def kruskal_filtration(simplex_list, vertices):
     data = uf_ds()
     barcode = {}
     
-    for simplex in simplex_list:
+    for i,simplex in enumerate(simplex_list):
         
         if type(simplex) == vertex:
             data.make_set(simplex)
@@ -143,9 +143,12 @@ def kruskal_filtration(simplex_list, vertices):
                 older, younger = sorted([e1,e2],key=lambda x: x.value, reverse=False)
                 data.op_union(younger, older)
                 barcode[younger.value] = [simplex, simplex.value]
-
+                
+        
         c = copy.copy(data)
-        data_history.append(c)
+        if  i == 0 or c != data_history[-1][1] :
+            data_history.append([i,c])
+
                   
     result = display(vertices, data) 
     remaining = []
@@ -154,7 +157,13 @@ def kruskal_filtration(simplex_list, vertices):
             remaining.append(i)
             barcode[i.value] = 'inf'
             
-            
+    data_history = {item[0]: item[1] for item in data_history}       
+    for i in range(len(simplex_list)):
+        if i in data_history.keys():
+            real_copy = data_history[i]
+        else:
+            data_history[i] = real_copy
+        
     return barcode, data_history
 
 
@@ -430,11 +439,23 @@ vertices.sort(key=lambda x: x.value, reverse=False)
 position = 16
 
 
+#random_test(simplex_list, vertices, 100)
+
+barcode, history = kruskal_filtration(simplex_list, vertices)
+
+print(history)
 
 
-random_test(simplex_list, vertices, 100)
 
-#test(simplex_list, position, vertices)
+
+
+
+
+
+
+
+
+
 
 
 
