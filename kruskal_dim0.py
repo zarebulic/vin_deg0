@@ -182,7 +182,7 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
     """
     Returns the barcode of a filtration with two neighbor simplices transposed
     """
-
+    N = len(simplex_list)
     barcode = old_barcode
     data_history = data_history_old
     
@@ -200,7 +200,8 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                 new_first.make_set(vertex2)
                 data_history[position] = new_first
                 edge2, m2 = barcode[vertex2.value]
-                for ufds in data_history[m2:] :
+                for i in range(m2, N) :
+                    ufds = data_history[i]
                     ufds.parent_node[vertex1] = vertex2
                     ufds.parent_node[vertex2] = vertex2
                     
@@ -219,12 +220,15 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                 
                 
                 vertex3 = data_history[m1].op_find(vertex1) #The older vertex to which the first one merges to 
-                for t, ufds in enumerate(data_history[m2:]):
+
+                for i in range(m2, N) :
+                    ufds = data_history[i]
                     ufds.parent_node[vertex1] = vertex2
-                    if  t + m2 >= m1:
+                    if  i >= m1:
                         ufds.parent_node[vertex2] = vertex3
                     else:
                         ufds.parent_node[vertex2] = vertex2
+                
             else:
                 #CASE 1.1 Both vertices merge with older 
                 print("CASE 1.1 Both vertices merge with older ")
@@ -436,16 +440,16 @@ g = graph(vertices, edges)
 
 simplex_list = preprocess(g, random = 1)
 vertices.sort(key=lambda x: x.value, reverse=False)
-position = 16
+position = 4
 
 
-#random_test(simplex_list, vertices, 100)
+random_test(simplex_list, vertices, 100)
 
 barcode, history = kruskal_filtration(simplex_list, vertices)
 
-print(history)
 
 
+test(simplex_list, position, vertices)
 
 
 
