@@ -308,7 +308,7 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                     e3, e4 = data_history[position-1].op_find(v3), data_history[position-1].op_find(v4)
                     print("CASE 3.4: if both edges kill different connected components")
                     if (e1 == e3 or e1 == e4) and e1.value == max(e2.value, e3.value, e4.value):
-                        print("CASE 3.4.2: if both edges kill 3 different connected components")
+                        print("CASE 3.4.1: if both edges kill 3 different connected components")
                         barcode[e1.value][0] = edge2
                         second_max = max(e2.value + e3.value - e1.value, e2.value + e4.value -e1.value, e3.value + e4.value - e1.value)
                         barcode[second_max][0] = edge1
@@ -318,7 +318,7 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                         data_history[position].op_union(e1, other)
                     
                     elif (e2 == e3 or e2 == e4) and e2.value == max(e1.value, e3.value, e4.value):
-                        print("CASE 3.4.2: if both edges kill 3 different connected components")
+                        print("CASE 3.4.1: if both edges kill 3 different connected components")
                         barcode[e2.value][0] = edge2
                         second_max = max(e1.value + e3.value - e2.value, e1.value + e4.value -e2.value, e3.value + e4.value - e2.value)
                         barcode[second_max][0] = edge1
@@ -328,7 +328,7 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                         data_history[position].op_union(e2, other)
                     
                     else:
-                        print("CASE 3.4.1: if both edges kill 4 different connected components")
+                        print("CASE 3.4.2: if both edges kill 4 different connected components")
                         barcode[max(e1.value, e2.value)][1] += 1
                         barcode[max(e3.value, e4.value)][1] -= 1
                         # Updating the UF data structure
@@ -347,7 +347,7 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                 else:
                     # CASE 3.1 Neither of the edges connects two components:
                     print("CASE 3.1 Neither of the edges connects different components")
-                
+                    
         
                 
     return barcode, data_history           

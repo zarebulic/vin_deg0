@@ -88,7 +88,7 @@ g = graph(vertices, edges)
 simplex_list = main.preprocess(g, random = 1)
 vertices.sort(key=lambda x: x.value, reverse=False)
 positions = [7]
-num_tests = 10000
+num_tests = 100000
 num_trans = 5
 
 
