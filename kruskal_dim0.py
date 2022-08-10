@@ -84,7 +84,58 @@ class graph:
         self.num_simplices = len(self.edges) + len(self.vertices)
         self.simplices = vertices, edges
     
+class Data_history:
+    
+    def __init__(self, real_objects):
+        self.real_objects = real_objects
+        self.positions = [position[0] for position in real_objects]
         
+    def __eq__(self, other):
+        if self.real_objects == other.real_objects:
+            return True
+        else:
+            return False
+        
+    def replace_object(self, position_old, new_object, position_new):
+        N = len(self.positions)
+        index = floor_search(self.positions, 0, N-1, position_old)
+        self.real_objects[index] = [position_new, new_object]
+                
+    def get_object(self, position):
+        N = len(self.positions)
+        index = floor_search(self.positions, 0, N-1, position)
+        return self.real_objects[index][1]
+    
+        
+
+def floor_search(arr, low, high, x):
+ 
+    if (low > high):
+        return -1
+ 
+    if (x >= arr[high]):
+        return high
+ 
+    mid = int((low + high) / 2)
+ 
+    # If middle point is floor.
+    if (arr[mid] == x):
+        return mid
+ 
+    # If x lies between mid-1 and mid
+    if (mid > 0 and arr[mid-1] <= x
+                and x < arr[mid]):
+        return mid - 1
+ 
+    # If x is smaller than mid,
+    # floor must be in left half.
+    if (x < arr[mid]):
+        return floor_search(arr, low, mid-1, x)
+ 
+    # If mid-1 is not floor and x is greater than
+    # arr[mid],
+    return floor_search(arr, mid + 1, high, x)
+
 
 def filtration(graph, random = 0):
     
@@ -126,7 +177,7 @@ def preprocess(g, random):
 def kruskal_filtration(simplex_list, vertices):
     
     vertex_count = 0
-    data_history = []
+    real_objects = []
     data = uf_ds()
     barcode = {}
     
@@ -145,8 +196,8 @@ def kruskal_filtration(simplex_list, vertices):
                 barcode[younger.value] = [simplex, simplex.value]
 
         c = copy.copy(data)
-        if  i == 0 or c != data_history[-1][1] :
-            data_history.append([i,c])
+        if  i == 0 or c != real_objects[-1][1] :
+            real_objects.append([i,c])
                   
     result = display(vertices, data) 
     remaining = []
@@ -155,12 +206,7 @@ def kruskal_filtration(simplex_list, vertices):
             remaining.append(i)
             barcode[i.value] = 'inf'
             
-    data_history = {item[0]: item[1] for item in data_history}       
-    for i in range(len(simplex_list)):
-        if i in data_history.keys():
-            real_copy = data_history[i]
-        else:
-            data_history[i] = real_copy
+    data_history = Data_history(real_objects)
         
     return barcode, data_history
 
@@ -197,42 +243,50 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                 #CASE 1.2 (First vertex persists to inf)
                 new_first = uf_ds()
                 new_first.make_set(vertex2)
-                data_history[position] = new_first
-                edge2, m2 = barcode[vertex2.value]
-                for i in range(m2, N) :
-                    ufds = data_history[i]
-                    ufds.parent_node[vertex1] = vertex2
-                    ufds.parent_node[vertex2] = vertex2
+                data_history.replace_object(position, new_first, position)
+                edge2, m2 = barcode[position+1]
+                for i, data in data_history.real_objects:
+                    if i >= m2:
+                        ufds = copy.copy(data_history.get_object(i))
+                        ufds.parent_node[vertex1] = vertex2
+                        ufds.parent_node[vertex2] = vertex2
+                        data_history.replace_object(i, ufds, i)
                     
                 return barcode, data_history
             else:
                 edge1, m1 = barcode[vertex1.value]  # m1, m2 notation from the proof
                 edge2, m2 = barcode[vertex2.value]
-            if data_history[m2].op_find(vertex2) == vertex1:
+            if data_history.get_object(m2).op_find(vertex2) == vertex1:
                 #CASE 1.3 Second vertex merges with first vertex
                 print("CASE 1.3 Second vertex merges with first vertex")
                 barcode[vertex1.value] = [edge1, m1]
                 barcode[vertex2.value] = [edge2, m2]
+                
                 #Updating UF data structure 
-                data_history[position] = copy.copy(data_history[position-1])
-                data_history[position].make_set(vertex2)
+                new_object = copy.copy(data_history.get_object(position - 1))
+                new_object.make_set(vertex2)
+                data_history.replace_object(position, new_object, position)
                 
-                
-                vertex3 = data_history[m1].op_find(vertex1) #The older vertex to which the first one merges to 
-                for t, ufds in enumerate(data_history[m2:]):
-                    ufds.parent_node[vertex1] = vertex2
-                    if  t + m2 >= m1:
-                        ufds.parent_node[vertex2] = vertex3
-                    else:
-                        ufds.parent_node[vertex2] = vertex2
+                vertex3 = data_history.get_object(m1).op_find(vertex1) #The older vertex to which the first one merges to 
+                for i, data in data_history.real_objects:
+                    if i >= m2:
+                        ufds = copy.copy(data_history.get_object(i))
+                        ufds.parent_node[vertex1] = vertex2
+                        if  i >= m1:
+                            ufds.parent_node[vertex2] = vertex3
+                        else:
+                            ufds.parent_node[vertex2] = vertex2
+                        data_history.replace_object(i, ufds, i) 
+                   
             else:
                 #CASE 1.1 Both vertices merge with older 
                 print("CASE 1.1 Both vertices merge with older ")
                 barcode[vertex1.value] = [edge2, m2]
                 barcode[vertex2.value] = [edge1, m1]
                 # Updating the UF datastructure
-                data_history[position] = copy.copy(data_history[position-1])
-                data_history[position].make_set(vertex2)
+                new_object = copy.copy(data_history.get_object(position - 1))
+                new_object.make_set(vertex2)
+                data_history.replace_object(position, new_object, position)
             
         else:
             
@@ -241,7 +295,7 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
             vertex1 = simplex_list[position]
             edge1 = simplex_list[position + 1]
             v1,v2 = edge1.vertices
-            e1, e2 = data_history[position].op_find(v1), data_history[position].op_find(v2)
+            e1, e2 = data_history.get_object(position).op_find(v1), data_history.get_object(position).op_find(v2)
             if vertex1 in edge1.vertices:
                 raise Exception("Filtration rules do not allow for this transposition")
                 
@@ -252,58 +306,69 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                 barcode[max(e1.value, e2.value)][1] -= 1
                 barcode[vertex1.value + 1] = barcode[vertex1.value]
                 barcode.pop(vertex1.value)
-                data_history[position] = copy.copy(data_history[position-1])
+                
+                new_object = copy.copy(data_history.get_object(position - 1))
                 older, younger = sorted([e1,e2],key=lambda x: x.value, reverse=False)
-                data_history[position].op_union(younger, older)
+                new_object.op_union(younger, older)
+                data_history.replace_object(position, new_object, position)
                 
             else:
                 print("CASE 2.1.2 Vertex Edge transposition when the edge does nothing")
                 # if the edge did not destroy the component, we simply change the vertex part of the barcode
                 barcode[vertex1.value + 1] = barcode[vertex1.value]
                 barcode.pop(vertex1.value)
-                data_history[position] = copy.copy(data_history[position-1])
+                
+                new_object = copy.copy(data_history.get_object(position - 1))
+                data_history.replace_object(position, new_object, position+1)
     else:   
         # The first simplex is an edge
         edge1 = simplex_list[position]
         v1,v2 = edge1.vertices
-        e1, e2 = data_history[position-1].op_find(v1), data_history[position-1].op_find(v2)
+        e1, e2 = data_history.get_object(position-1).op_find(v1), data_history.get_object(position-1).op_find(v2)
         
         if type(simplex_list[position + 1]) == vertex:
             # CASE 2.2 the first simplex is an edge
             print("CASE 2.2 Edge vertex transposition")
             vertex1 = simplex_list[position + 1]
-            if data_history[position-1].op_find(v1) != data_history[position-1].op_find(v2):
+            if data_history.get_object(position-1).op_find(v1) != data_history.get_object(position-1).op_find(v2):
                 # This is the case if the edge destroyed a component
                 print("CASE 2.2.1 Edge Vertex transposition when the edge kills a component")
                 barcode[max(e1.value, e2.value)][1] += 1
                 barcode[vertex1.value - 1] = barcode[vertex1.value]
                 barcode.pop(vertex1.value)
-                data_history[position] = copy.copy(data_history[position - 1])
-                data_history[position].make_set(vertex1)
+                
+                new_object = copy.copy(data_history.get_object(position - 1))
+                new_object.make_set(vertex1)
+                data_history.replace_object(position, new_object, position)
                 
             else:
                 # if the edge did not destroy the component, we simply change the vertex part of the barcode
                 print("CASE 2.2.2 Edge Vertex transposition when the edge does nothing")
                 barcode[vertex1.value - 1] = barcode[vertex1.value]
-                del barcode[vertex1.value]
-                data_history[position].make_set(vertex1)
+                barcode.pop(vertex1.value)
+                
+                new_object = copy.copy(data_history.get_object(position - 1))
+                new_object.make_set(vertex1)
+                data_history.replace_object(position + 1, new_object, position)
                 
         else: 
             #CASE 3 - both simplices are edges
             print("CASE 3 Both simplices are edges")
             edge2 = simplex_list[position+1]
             v3,v4 = edge2.vertices
-            if data_history[position-1].op_find(v1) != data_history[position-1].op_find(v2):
-                if data_history[position].op_find(v3) == data_history[position].op_find(v4):
-                    e1, e2 = data_history[position-1].op_find(v1), data_history[position-1].op_find(v2)
-                    e3, e4 = data_history[position-1].op_find(v3), data_history[position-1].op_find(v4)
+            if data_history.get_object(position-1).op_find(v1) != data_history.get_object(position-1).op_find(v2):
+                if data_history.get_object(position).op_find(v3) == data_history.get_object(position).op_find(v4):
+                    e1, e2 = data_history.get_object(position-1).op_find(v1), data_history.get_object(position-1).op_find(v2)
+                    e3, e4 = data_history.get_object(position-1).op_find(v3), data_history.get_object(position-1).op_find(v4)
                     # CASE 3.2 if the first edge destroys a component but the second one does not
                     print("CASE 3.2 if the first edge destroys a component but the second one does not")
-                    if data_history[position-1].op_find(v3) == data_history[position-1].op_find(v4):
+                    if data_history.get_object(position-1).op_find(v3) == data_history.get_object(position-1).op_find(v4):
                         # CASE 3.2.1
                         print("CASE 3.2.1 If the second edge does not connect the same components as the first edge")
                         barcode[max(e1.value, e2.value)][1] += 1
-                        data_history[position] = data_history[position - 1]
+                        
+                        new_object = copy.copy(data_history.get_object(position))
+                        data_history.replace_object(position, new_object, position + 1)
                     else:
                         # CASE 3.2.2
                         print("CASE 3.2.2 If the second edge connects the same components as the first edge")
@@ -311,8 +376,8 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                         pass
                 else:
                     #CASE 3.4: if both edges kill a connected component
-                    e1, e2 = data_history[position-1].op_find(v1), data_history[position-1].op_find(v2)
-                    e3, e4 = data_history[position-1].op_find(v3), data_history[position-1].op_find(v4)
+                    e1, e2 = data_history.get_object(position-1).op_find(v1), data_history.get_object(position-1).op_find(v2)
+                    e3, e4 = data_history.get_object(position-1).op_find(v3), data_history.get_object(position-1).op_find(v4)
                     print("CASE 3.4: if both edges kill different connected components")
                     if (e1 == e3 or e1 == e4) and e1.value == max(e2.value, e3.value, e4.value):
                         print("CASE 3.4.1: if both edges kill 3 different connected components")
@@ -321,8 +386,9 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                         barcode[second_max][0] = edge1
                         #History
                         other = e3 if e1==e4 else e4
-                        data_history[position] = copy.copy(data_history[position-1])
-                        data_history[position].op_union(e1, other)
+                        new_object = copy.copy(data_history.get_object(position - 1))
+                        new_object.op_union(e1, other)
+                        data_history.replace_object(position, new_object, position)
                     
                     elif (e2 == e3 or e2 == e4) and e2.value == max(e1.value, e3.value, e4.value):
                         print("CASE 3.4.1: if both edges kill 3 different connected components")
@@ -331,26 +397,29 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                         barcode[second_max][0] = edge1
                         #History
                         other = e3 if e2==e4 else e4
-                        data_history[position] = copy.copy(data_history[position-1])
-                        data_history[position].op_union(e2, other)
+                        new_object = copy.copy(data_history.get_object(position - 1))
+                        new_object.op_union(e2, other)
+                        data_history.replace_object(position, new_object, position)
                     
                     else:
                         print("CASE 3.4.2: if both edges kill 4 different connected components")
                         barcode[max(e1.value, e2.value)][1] += 1
                         barcode[max(e3.value, e4.value)][1] -= 1
                         # Updating the UF data structure
-                        data_history[position] = copy.copy(data_history[position - 1])
-                        e3, e4 = data_history[position].op_find(v3), data_history[position].op_find(v4)
+                        new_object = copy.copy(data_history.get_object(position - 1))
                         older, younger = sorted([e3,e4],key=lambda x: x.value, reverse=False)
-                        data_history[edge1.value].op_union(younger, older)
+                        new_object.op_union(younger, older)
+                        data_history.replace_object(position, new_object, position)
                         
             else:
-                if data_history[position].op_find(v3) != data_history[position].op_find(v4):
+                if data_history.get_object(position).op_find(v3) != data_history.get_object(position).op_find(v4):
                     # CASE 3.3
-                    e3, e4 = data_history[position-1].op_find(v3), data_history[position-1].op_find(v4)
+                    e3, e4 = data_history.get_object(position-1).op_find(v3), data_history.get_object(position-1).op_find(v4)
                     print("CASE 3.3 If the second edge destroys a component, but the first edge does not")
                     barcode[max(e3.value, e4.value)][1] -= 1
-                    data_history[position] = copy.copy(data_history[position + 1])
+                    new_object = copy.copy(data_history.get_object(position + 1))
+                    data_history.replace_object(position + 1, new_object, position)
+                    
                 else:
                     # CASE 3.1 Neither of the edges connects two components:
                     print("CASE 3.1 Neither of the edges connects different components")
@@ -432,13 +501,16 @@ def test(simplex_list, position, vertices):
         #return True
     else:
         print("Fail history")
-        for i, (h1, h2) in enumerate(zip(vine_data_history, kruskal_data_history)):
+        for i, (h1, h2) in enumerate(zip(vine_data_history.real_objects, kruskal_data_history.real_objects)):
             print(h1 == h2)
             if h1 != h2:
-                print(i)
-                #print_uf(vine_data_history)
-                #print_uf(kruskal_data_history, vertices)
-        #return False
+               print( h1[0])
+               #print_uf(vertices, h1[1])
+               print("Where it should be:")
+               print(h2[0])
+               #print_uf(vertices, h2[1])
+             
+
     if vine_data_history == kruskal_data_history and barcode_kruskal == barcode_vine:
         return True
     else:
@@ -463,12 +535,12 @@ g = graph(vertices, edges)
 
 simplex_list = preprocess(g, random = 1)
 vertices.sort(key=lambda x: x.value, reverse=False)
-position = 7
+position = 5
 
 
 
 
-#random_test(simplex_list, vertices, 100000)
+#random_test(simplex_list, vertices, 10000)
 #test(simplex_list, position, vertices)
 
 
