@@ -7,8 +7,9 @@ Created on Sun Jul 24 23:15:16 2022
 import numpy as np
 import itertools
 import copy
+import random
 
-large = 100000
+large = 1000000
 
 class uf_ds:
     parent_node = {}
@@ -187,7 +188,10 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
             if barcode[vertex1.value] == 'inf':
                 print("CASE 1.2 (First vertex persists to inf)")
                 #CASE 1.2 (First vertex persists to inf)
-                new_first = uf_ds()
+                if position == 0:
+                    new_first = uf_ds()
+                else:
+                    new_first = copy.copy(data_history[position-1])
                 new_first.make_set(vertex2)
                 data_history[position] = new_first
                 edge2, m2 = barcode[vertex2.value]
@@ -198,6 +202,7 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                 return barcode, data_history
             else:
                 edge1, m1 = barcode[vertex1.value]  # m1, m2 notation from the proof
+                #print(barcode[vertex2.value])
                 edge2, m2 = barcode[vertex2.value]
             if data_history[m2].op_find(vertex2) == vertex1:
                 #CASE 1.3 Second vertex merges with first vertex
@@ -286,7 +291,9 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
             print("CASE 3 Both simplices are edges")
             edge2 = simplex_list[position+1]
             v3,v4 = edge2.vertices
-            if data_history[position-1].op_find(v1) != data_history[position-1].op_find(v2):
+            e1, e2 = data_history[position-1].op_find(v1), data_history[position-1].op_find(v2)
+            e3, e4 = data_history[position-1].op_find(v3), data_history[position-1].op_find(v4)
+            if e1 != e2:
                 if data_history[position].op_find(v3) == data_history[position].op_find(v4):
                     e1, e2 = data_history[position-1].op_find(v1), data_history[position-1].op_find(v2)
                     e3, e4 = data_history[position-1].op_find(v3), data_history[position-1].op_find(v4)
@@ -304,8 +311,6 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                         pass
                 else:
                     #CASE 3.4: if both edges kill a connected component
-                    e1, e2 = data_history[position-1].op_find(v1), data_history[position-1].op_find(v2)
-                    e3, e4 = data_history[position-1].op_find(v3), data_history[position-1].op_find(v4)
                     print("CASE 3.4: if both edges kill different connected components")
                     if (e1 == e3 or e1 == e4) and e1.value == max(e2.value, e3.value, e4.value):
                         print("CASE 3.4.1: if both edges kill 3 different connected components")
@@ -331,6 +336,7 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                         print("CASE 3.4.2: if both edges kill 4 different connected components")
                         barcode[max(e1.value, e2.value)][1] += 1
                         barcode[max(e3.value, e4.value)][1] -= 1
+                        
                         # Updating the UF data structure
                         data_history[position] = copy.copy(data_history[position - 1])
                         e3, e4 = data_history[position].op_find(v3), data_history[position].op_find(v4)
@@ -418,6 +424,9 @@ def test(simplex_list, position, vertices):
         #return True
     else:
         print("Fail barcode")
+        print(barcode)
+        print(barcode_vine)
+        print(barcode_kruskal)
         #return False
     
     if vine_data_history == kruskal_data_history:
@@ -429,12 +438,14 @@ def test(simplex_list, position, vertices):
             print(h1 == h2)
             if h1 != h2:
                 print(i)
-                #print_uf(vine_data_history)
-                #print_uf(kruskal_data_history, vertices)
+                print(h1.parent_node)
+                print(h2.parent_node)
         #return False
     if vine_data_history == kruskal_data_history and barcode_kruskal == barcode_vine:
         return True
     else:
+        print(simplex_list[position])
+        print(simplex_list[position+1])
         return False
         
 def random_test(simplex_list, vertices, number):
@@ -449,9 +460,11 @@ def random_test(simplex_list, vertices, number):
 
 
 # CREATION AND PREPROCESSING
+num_edges = 20
 vertices = [vertex() for i in range(10)]
 pair_vertices = itertools.permutations(vertices, 2)
 edges = [edge(v1,v2) for v1,v2 in pair_vertices]
+edges = random.sample(edges, num_edges)
 g = graph(vertices, edges)
 
 simplex_list = preprocess(g, random = 1)
@@ -461,7 +474,7 @@ position = 7
 
 
 
-#random_test(simplex_list, vertices, 100000)
+#random_test(simplex_list, vertices, 1000000)
 #test(simplex_list, position, vertices)
 
 
