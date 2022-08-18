@@ -9,7 +9,7 @@ import itertools
 import copy
 import random
 
-large = 1000000
+large = 10000000
 
 class uf_ds:
     parent_node = {}
@@ -22,6 +22,11 @@ class uf_ds:
            if obj not in other.parent_node:
                return False
            if self.op_find(obj) != other.op_find(obj):
+               return False
+       for obj in other.parent_node:
+           if obj not in self.parent_node:
+               return False
+           if other.op_find(obj) != self.op_find(obj):
                return False
        return True
            
@@ -39,17 +44,24 @@ class uf_ds:
         return other
         
     def make_set(self, u):
-        #for i in u:
+
             self.parent_node[u] = u
 
-    def op_find(self, k):
+    def op_find(self, k, depth = 0):
+        #print("k value: ", k.value)
         if self.parent_node[k] == k:
             return k
-        return self.op_find(self.parent_node[k])
+        elif depth >= len(self.parent_node):
+            raise Exception
+        
+        return self.op_find(self.parent_node[k], depth + 1)
 
     def op_union(self, a, b):
         x = self.op_find(a)
         y = self.op_find(b)
+        [x,y] = sorted([x,y], key=lambda x: x.value, reverse = True)
+        if self.parent_node[x].value < y.value:
+            raise Exception
         self.parent_node[x] = y
     
 
@@ -89,12 +101,20 @@ class graph:
 
 def filtration(graph, random = 0):
     
+    vals = []
     if random:
         for vertex in graph.vertices:
             vertex.value = np.random.randint(0, large*graph.num_simplices)
+            if vertex.value in vals:
+                vertex.value += 0.1
+            vals.append(vertex.value)
         for e in graph.edges:
             max_vertex = np.max([e.get_vertices()[0].value, e.get_vertices()[1].value])
             e.value = np.random.randint(max_vertex+1, large*graph.num_simplices)
+            if e.value in vals:
+                e.value += 0.1
+            vals.append(e.value)
+            
         clean_procedure(graph)
         
     else:
@@ -104,6 +124,7 @@ def filtration(graph, random = 0):
         for i,edge in enumerate(graph.edges):
             edge.value = i + graph.num_vertices
  
+    
 def clean_procedure(graph):
     values = []
     simplex_list = list(np.concatenate(graph.simplices).flat)
@@ -166,72 +187,116 @@ def print_barcode(barcode):
         else:
             print("[" + str(key) + ", " + str(value[1]) + " )")
 
-
+def print_parent(vertices, ufds):
+    for v in vertices:
+        if v in ufds.parent_node:
+            print(f"parent node of {v.value} is { ufds.parent_node[v].value}")
 
 # ALGORITHM FOR SWITCHING:
     
-def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
+def transpose_barcode(simplex_list, vertices ,old_barcode, position, data_history_old):
     """
     Returns the barcode of a filtration with two neighbor simplices transposed
     """
 
-    barcode = old_barcode
-    data_history = data_history_old
+    barcode = copy.copy(old_barcode)
+    data_history = copy.copy(data_history_old)
+
     
     if type(simplex_list[position]) == vertex:
         
         if type(simplex_list[position + 1]) == vertex:
             # CASE 1 (Vertex - Vertex transposition)
-            print("CASE 1 (Vertex - Vertex transposition)")
+            print("CASE 1 Vertex - Vertex transposition")
             vertex1 = simplex_list[position]
             vertex2 = simplex_list[position+1]
             if barcode[vertex1.value] == 'inf':
-                print("CASE 1.2 (First vertex persists to inf)")
-                #CASE 1.2 (First vertex persists to inf)
-                if position == 0:
-                    new_first = uf_ds()
+                if barcode[vertex2.value] == 'inf':
+                    print("CASE 1.1 Both vertices persists to inf")
+                    #Barcode does not change
+                    data_history[position] = copy.copy(data_history[position-1]) if position != 0 else uf_ds()
+                    data_history[position].make_set(vertex2)
                 else:
-                    new_first = copy.copy(data_history[position-1])
-                new_first.make_set(vertex2)
-                data_history[position] = new_first
-                edge2, m2 = barcode[vertex2.value]
-                for ufds in data_history[m2:]:
-                    ufds.parent_node[vertex1] = vertex2
-                    ufds.parent_node[vertex2] = vertex2
-                    
-                return barcode, data_history
-            else:
-                edge1, m1 = barcode[vertex1.value]  # m1, m2 notation from the proof
-                #print(barcode[vertex2.value])
-                edge2, m2 = barcode[vertex2.value]
-            if data_history[m2].op_find(vertex2) == vertex1:
-                #CASE 1.3 Second vertex merges with first vertex
-                print("CASE 1.3 Second vertex merges with first vertex")
-                barcode[vertex1.value] = [edge1, m1]
-                barcode[vertex2.value] = [edge2, m2]
-                #Updating UF data structure 
-                data_history[position] = copy.copy(data_history[position-1])
-                data_history[position].make_set(vertex2)
-                
-                
-                vertex3 = data_history[m1].op_find(vertex1) #The older vertex to which the first one merges to 
-                for t, ufds in enumerate(data_history[m2:]):
-                    ufds.parent_node[vertex1] = vertex2
-                    if  t + m2 >= m1:
-                        ufds.parent_node[vertex2] = vertex3
+                    #CASE 1.2 (First vertex persists to inf)
+                    print("CASE 1.2 First vertex persists to inf but the second does not")
+                    edge2, m2 = barcode[vertex2.value]
+                    if data_history[m2].op_find(vertex2) != vertex1:
+                        print("CASE 1.2.1 Second vertex merges with an older vertex")
+                        barcode[position + 1] = 'inf'
+                        barcode[position] = [edge2, m2]
+                        data_history[position] = copy.copy(data_history[position-1]) if position != 0 else uf_ds()
+                        data_history[position].make_set(vertex2)
                     else:
-                        ufds.parent_node[vertex2] = vertex2
+                        print("CASE 1.2.2 Second vertex merges with the first vertex")
+                        #Barcode does not change
+                        data_history[position] = copy.copy(data_history[position-1]) if position != 0 else uf_ds()
+                        data_history[position].make_set(vertex2)
+                        
+                        for ufds in data_history[m2:]:
+                            ufds.parent_node[vertex1] = vertex2
+                            ufds.parent_node[vertex2] = vertex2
+                        #check_parent_node(vertices, data_history)
+                            
             else:
-                #CASE 1.1 Both vertices merge with older 
-                print("CASE 1.1 Both vertices merge with older ")
-                barcode[vertex1.value] = [edge2, m2]
-                barcode[vertex2.value] = [edge1, m1]
-                # Updating the UF datastructure
-                data_history[position] = copy.copy(data_history[position-1])
-                data_history[position].make_set(vertex2)
-                
-                
-            
+                edge1, m1 = barcode[vertex1.value]
+                if barcode[vertex2.value] == 'inf':
+                    print("CASE 1.3 Only the second vertex persists to inf")
+                    barcode[position + 1] = [edge1,m1]
+                    barcode[position] = 'inf'
+                    data_history[position] = copy.copy(data_history[position-1]) if position != 0 else uf_ds()
+                    data_history[position].make_set(vertex2)
+                else:
+                    print("CASE 1.4 Neither one of the vertices persists to infinity")
+                    edge2, m2 = barcode[vertex2.value]
+                    if data_history[m2].op_find(vertex2) == vertex1:
+                        #CASE 1.3 Second vertex merges with first vertex
+                        print("CASE 1.4.2 Second vertex merges with the first vertex")
+                        #Barcode does not change
+                        data_history[position] = copy.copy(data_history[position-1])
+                        data_history[position].make_set(vertex2) 
+                        for t, ufds in enumerate(data_history[m2:]):
+                            if t + m2 < m1:
+                                ufds.parent_node[vertex1] = vertex2
+                                ufds.parent_node[vertex2] = vertex2
+                            if  t + m2 >= m1:
+                                ufds.parent_node[vertex2] = ufds.op_find(vertex1)
+                                ufds.parent_node[vertex1] = ufds.op_find(vertex1)
+                        
+                    else:
+                        #for i,ufds in enumerate(data_history):
+                            #for v in vertices:
+                               # if v in ufds.parent_node:
+                                    #if v.value < ufds.parent_node[v].value:
+                                        #print("Mistake at: ", i)
+                                        #(f"{v.value} < {ufds.parent_node[v].value}")
+                                       # print_parent(vertices, data_history[i-1])
+                                        #print("next")
+                                        #print_parent(vertices, ufds)
+                                        #raise Exception
+                        #print("pre-trans at:", max(m1,m2)-1)              
+                        #print_parent(vertices, data_history[max(m2,m1)-1])
+                        #print("pre-trans at:", max(m1,m2))
+                        #print_parent(vertices, data_history[max(m2,m1)])
+                        #print("Next")
+                        print("CASE 1.4.1 Both vertices merge with older vertices")
+                        barcode[vertex1.value] = [edge2, m2]
+                        barcode[vertex2.value] = [edge1, m1]
+                        #print("v1: ", vertex1.value)
+                        #print("v2: ", vertex2.value)
+                        #print("m1; ",m1)
+                        #print("m2: ",m2)
+                        
+                        #print_uf(vertices, data_history[m2])
+                        #print(data_history[m2])
+                        # Updating the UF datastructure
+                        data_history[position] = copy.copy(data_history[position-1])
+                        data_history[position].make_set(vertex2)
+                        #print("next")
+                        #print_parent(vertices, data_history[m2-1])
+                       # print("next")
+                        #print_parent(vertices, data_history[m2])
+                        
+                        #check_parent_node(vertices, data_history)
         else:
             
             #CASE 2 - (Vertex and Edge transposition)
@@ -285,15 +350,14 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                 barcode[vertex1.value - 1] = barcode[vertex1.value]
                 del barcode[vertex1.value]
                 data_history[position].make_set(vertex1)
+
                 
         else: 
             #CASE 3 - both simplices are edges
             print("CASE 3 Both simplices are edges")
             edge2 = simplex_list[position+1]
             v3,v4 = edge2.vertices
-            e1, e2 = data_history[position-1].op_find(v1), data_history[position-1].op_find(v2)
-            e3, e4 = data_history[position-1].op_find(v3), data_history[position-1].op_find(v4)
-            if e1 != e2:
+            if data_history[position-1].op_find(v1) != data_history[position-1].op_find(v2):
                 if data_history[position].op_find(v3) == data_history[position].op_find(v4):
                     e1, e2 = data_history[position-1].op_find(v1), data_history[position-1].op_find(v2)
                     e3, e4 = data_history[position-1].op_find(v3), data_history[position-1].op_find(v4)
@@ -303,15 +367,16 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                         # CASE 3.2.1
                         print("CASE 3.2.1 If the second edge does not connect the same components as the first edge")
                         barcode[max(e1.value, e2.value)][1] += 1
-                        data_history[position] = data_history[position - 1]
+                        data_history[position] = copy.copy(data_history[position - 1])
                     else:
                         # CASE 3.2.2
                         print("CASE 3.2.2 If the second edge connects the same components as the first edge")
                         barcode[max(e1.value, e2.value)][0] = edge2
-                        pass
                 else:
                     #CASE 3.4: if both edges kill a connected component
                     print("CASE 3.4: if both edges kill different connected components")
+                    e1, e2 = data_history[position-1].op_find(v1), data_history[position-1].op_find(v2)
+                    e3, e4 = data_history[position-1].op_find(v3), data_history[position-1].op_find(v4)
                     if (e1 == e3 or e1 == e4) and e1.value == max(e2.value, e3.value, e4.value):
                         print("CASE 3.4.1: if both edges kill 3 different connected components")
                         barcode[e1.value][0] = edge2
@@ -411,7 +476,9 @@ def test(simplex_list, position, vertices):
     
     barcode, data_history = kruskal_filtration(simplex_list, vertices)
     barcode_vine, vine_data_history = copy.copy(barcode), copy.copy(data_history)
-    barcode_vine, vine_data_history = transpose_barcode(simplex_list, barcode_vine, position, vine_data_history)
+    barcode_vine, vine_data_history = transpose_barcode(simplex_list, vertices, barcode_vine, position, vine_data_history)
+    
+    check_validity(vertices, vine_data_history)
     
     simplex_list[position].value, simplex_list[position + 1].value = simplex_list[position+1].value, simplex_list[position].value
     simplex_list.sort(key=lambda x: x.value, reverse=False)
@@ -451,16 +518,43 @@ def test(simplex_list, position, vertices):
 def random_test(simplex_list, vertices, number):
     
     for i in range(number):
-        position = np.random.randint(20)
+        position = np.random.randint(len(simplex_list) - 2)
         simplex_list = preprocess(g, random = 1)
         vertices.sort(key=lambda x: x.value, reverse=False)
         if not test(simplex_list, position, vertices):
             print(position)
-            raise Exception("Fail")
+
+
+def check_validity(vertices, data_history):
+    for i,ufds in enumerate(data_history):
+        #print("Checking validity at: ",i)
+        for v in vertices:
+            if v in ufds.parent_node:
+                ufds.op_find(v)
+
+def check_parent_node(simplex_list, vertices, data_history):
+    for i,ufds in enumerate(data_history):
+        for v in vertices:
+            if v in ufds.parent_node:
+                if v.value < ufds.parent_node[v].value:
+                    print("Mistake at: ", i)
+                    print(f"At {i}, the simplex was: {simplex_list[i]}")
+                    if type(simplex_list[i]) == edge:
+                        v1,v2 = simplex_list[i].vertices
+                        e1 = ufds.op_find(v1)
+                        e2 = ufds.op_find(v2)
+                        print("edge vertices were: ", v1.value, v2.value)
+                        print("edge vertices parents were: ", e1.value, e2.value)
+                    print(f"{v.value} < {ufds.parent_node[v].value}")
+                    print("parent nodes at: ",i-1)
+                    print_parent(vertices, data_history[i-1])
+                    print("parent nodes at: ",i)
+                    print_parent(vertices, ufds)
+                    raise Exception
 
 
 # CREATION AND PREPROCESSING
-num_edges = 20
+num_edges = 10
 vertices = [vertex() for i in range(10)]
 pair_vertices = itertools.permutations(vertices, 2)
 edges = [edge(v1,v2) for v1,v2 in pair_vertices]
@@ -469,12 +563,12 @@ g = graph(vertices, edges)
 
 simplex_list = preprocess(g, random = 1)
 vertices.sort(key=lambda x: x.value, reverse=False)
-position = 7
+position = 3
+num_test = 10000   
 
 
-
-
-#random_test(simplex_list, vertices, 1000000)
+#random_test(simplex_list, vertices, num_test)
 #test(simplex_list, position, vertices)
 
-
+    
+    
