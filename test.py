@@ -50,10 +50,9 @@ def test_multiple_transpositions(simplex_list, vertices, positions):
                 if len(positions) <= 5:
                     return True
                 continue  
-        barcode_vine, vine_data_history = main.transpose_barcode(simplex_list, vertices, barcode_vine, position, vine_data_history)
+        barcode_vine, vine_data_history = main.transpose_barcode(simplex_list, barcode_vine, position, vine_data_history)
         simplex_list_new, vertices_new = transposition(simplex_list, vertices, position)
-        main.check_validity(vertices, vine_data_history)
-        #main.check_parent_node(simplex_list_new, vertices_new, vine_data_history)
+
     barcode_kruskal, kruskal_data_history = main.kruskal_filtration(simplex_list_new, vertices_new)
 
     
@@ -100,7 +99,7 @@ def test_multiple_transpositions(simplex_list, vertices, positions):
         
 def radnom_multiple_test(simplex_list, vertices, num_trans, num_tests):
     
-    num_edges = 10
+
     for i in range(num_tests):
         positions = np.random.randint(0, len(simplex_list)-1, num_trans)
         vertices = [vertex() for i in range(10)]
@@ -119,7 +118,7 @@ def radnom_multiple_test(simplex_list, vertices, num_trans, num_tests):
  
         
         
-num_edges = 10
+num_edges = 20
 vertices = [vertex() for i in range(10)]
 pair_vertices = itertools.permutations(vertices, 2)
 edges = [edge(v1,v2) for v1,v2 in pair_vertices]
