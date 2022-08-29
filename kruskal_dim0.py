@@ -63,15 +63,19 @@ class uf_ds:
 
 
 class vertex:
-    def __init__(self, value = -1):
+    def __init__(self, value = -1, value1 = -1, value2 = -1):
         self.value = value
+        self.value1 = value1
+        self.value2 = value2
 
 
 class edge:
     
-    def __init__(self, vertex1, vertex2, value = -1):
+    def __init__(self, vertex1, vertex2, value = -1, value1 = -1, value2 = -1):
         self.vertices = (vertex1, vertex2)
         self.value = value
+        self.value1 = value1
+        self.value2 = value2
     
     def get_vertices(self):
         return self.vertices
@@ -89,19 +93,19 @@ class graph:
 
 def filtration(graph, random = 0):
     
-    vals = []
+    values = []
     if random:
         for vertex in graph.vertices:
             vertex.value = np.random.randint(0, large*graph.num_simplices)
-            if vertex.value in vals:
+            if vertex.value in values:
                 vertex.value += 0.1
-            vals.append(vertex.value)
+            values.append(vertex.value)
         for e in graph.edges:
             max_vertex = np.max([e.get_vertices()[0].value, e.get_vertices()[1].value])
             e.value = np.random.randint(max_vertex+1, large*graph.num_simplices)
-            if e.value in vals:
+            if e.value in values:
                 e.value += 0.1
-            vals.append(e.value)
+            values.append(e.value)
             
         clean_procedure(graph)
         
@@ -111,7 +115,7 @@ def filtration(graph, random = 0):
            
         for i,edge in enumerate(graph.edges):
             edge.value = i + graph.num_vertices
- 
+  
     
 def clean_procedure(graph):
     values = []
@@ -365,8 +369,7 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                 else:
                     # CASE 3.1 Neither of the edges connects two components:
                     print("CASE 3.1 Neither of the edges connects different components")
-                    
-        
+                      
                 
     return barcode, data_history           
 
