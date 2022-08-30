@@ -15,7 +15,6 @@ from kruskal_dim0 import edge
 from kruskal_dim0 import graph
 import copy
 
-import matplotlib.pyplot as plt
 import gudhi
 
 
@@ -135,7 +134,7 @@ edges = random.sample(edges, num_edges)
 g = graph(vertices, edges)
 simplex_list = main.preprocess(g, random = 1)
 num_trans = 100
-num_tests = 10000
+num_tests = 100000
 
 radnom_multiple_test(num_trans, num_tests)
 
