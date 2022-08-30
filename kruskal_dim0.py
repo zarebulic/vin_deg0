@@ -44,15 +44,12 @@ class uf_ds:
         return other
         
     def make_set(self, u):
-
             self.parent_node[u] = u
 
-    def op_find(self, k, depth = 0):
-        #print("k value: ", k.value)
+    def op_find(self, k):
         if self.parent_node[k] == k:
             return k
-        
-        return self.op_find(self.parent_node[k], depth + 1)
+        return self.op_find(self.parent_node[k])
 
     def op_union(self, a, b):
         x = self.op_find(a)
@@ -103,7 +100,7 @@ def filtration(graph, random = 0):
                 e.value += 0.1
             vals.append(e.value)
             
-        clean_procedure(graph)
+        graph = clean_procedure(graph)
         
     else:
         for i,vertex in enumerate(graph.vertices):
@@ -121,7 +118,7 @@ def clean_procedure(graph):
     values.sort()
     for simplex in simplex_list:
         simplex.value = values.index(simplex.value)
- 
+    return graph
 
 def preprocess(g, random):
 
@@ -235,8 +232,8 @@ def transpose_barcode(simplex_list, old_barcode, position, data_history_old):
                                 ufds.parent_node[vertex2] = vertex2
                             if  t + m2 >= m1:
                                 ufds.parent_node[vertex2] = ufds.op_find(vertex1)
-                                ufds.parent_node[vertex1] = ufds.op_find(vertex1)
-                        
+                                #ufds.parent_node[vertex1] = ufds.op_find(vertex1)
+                                
                     else:
                        
                         print("CASE 1.4.1 Both vertices merge with older vertices")
