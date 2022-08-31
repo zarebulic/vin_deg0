@@ -117,6 +117,7 @@ def radnom_multiple_test(simplex_list, vertices, num_trans, num_tests):
             print("True")
  
         
+<<<<<<< Updated upstream
         
 num_edges = 20
 vertices = [vertex() for i in range(10)]
