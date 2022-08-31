@@ -33,6 +33,8 @@ def test_multiple_transpositions(simplex_list, vertices, positions):
     barcode_vine, vine_data_history = copy.copy(barcode), copy.copy(data_history)
     barcode_orig = copy.deepcopy(barcode)
     
+    simplex_list_new = simplex_list
+    
     for position in positions:
         
         # Checking if the switch follows the rules of filtrations
@@ -51,7 +53,7 @@ def test_multiple_transpositions(simplex_list, vertices, positions):
                     return True
                 continue  
         barcode_vine, vine_data_history = main.transpose_barcode(simplex_list, barcode_vine, position, vine_data_history)
-        simplex_list_new, vertices_new = transposition(simplex_list, vertices, position)
+        simplex_list_new, vertices_new = transposition(simplex_list_new, vertices, position)
 
     barcode_kruskal, kruskal_data_history = main.kruskal_filtration(simplex_list_new, vertices_new)
 
@@ -97,12 +99,15 @@ def test_multiple_transpositions(simplex_list, vertices, positions):
     
     return barcode_kruskal == barcode_vine and kruskal_data_history == vine_data_history
         
-def radnom_multiple_test(simplex_list, vertices, num_trans, num_tests):
+
+
+
+def radnom_multiple_test(simplex_list, vertices, num_trans, num_tests, num_vertices, num_edges):
     
 
     for i in range(num_tests):
         positions = np.random.randint(0, len(simplex_list)-1, num_trans)
-        vertices = [vertex() for i in range(10)]
+        vertices = [vertex() for i in range(num_vertices)]
         pair_vertices = itertools.permutations(vertices, 2)
         edges = [edge(v1,v2) for v1,v2 in pair_vertices]
         edges = random.sample(edges, num_edges)
@@ -117,60 +122,25 @@ def radnom_multiple_test(simplex_list, vertices, num_trans, num_tests):
             print("True")
  
         
-<<<<<<< Updated upstream
-        
-num_edges = 20
-vertices = [vertex() for i in range(10)]
-pair_vertices = itertools.permutations(vertices, 2)
-edges = [edge(v1,v2) for v1,v2 in pair_vertices]
-edges = random.sample(edges, num_edges)
-=======
-        # Checking if the switch follows the rules of filtrations
-        s1 = simplex_list[position]
-        s2 = simplex_list[position + 1]
-        if type(s1) == edge and type(s2) == vertex:
-            if s2 in s1.vertices:
-                #print("Transposition not allowed")
-                if len(positions) <=3:
-                    return True
-                continue
-        if type(s1) == vertex and type(s2) == edge:
-            if s1 in s2.vertices:
-                #print("Transposition not allowed")
-                if len(positions) <= 5:
-                    return True
-                continue  
-            
-        start = time.time()
-        barcode_vine, vine_data_history = main.transpose_barcode(simplex_list, barcode_vine, position, vine_data_history)
-        end = time.time()
-        print(end - start)  
-        times.append(end - start)
-        simplex_list_new, vertices_new = transposition(simplex_list, vertices, position)
-      
-    print(np.mean(times))
-    return barcode_vine
-
-
        
-num_edges = 1
+num_edges = 50
 num_vertices = 10
-
-vertices = [vertex() for i in range(100)]
-edges = [edge(random.choice(vertices), random.choice(vertices)) for i in range(500)]
->>>>>>> Stashed changes
-g = graph(vertices, edges)
-simplex_list = main.preprocess(g, random = 1)
-vertices.sort(key=lambda x: x.value, reverse=False)
 positions = [0]
 num_tests = 10000000
 num_trans = 100
+
+vertices = [vertex() for i in range(num_vertices)]
+edges = [edge(random.choice(vertices), random.choice(vertices)) for i in range(num_edges)]
+
+g = graph(vertices, edges)
+simplex_list = main.preprocess(g, random = 1)
+vertices.sort(key=lambda x: x.value, reverse=False)
 
 
 
 #print(test_multiple_transpositions(simplex_list, vertices, positions))
 #radnom_filtration_test(simplex_list, vertices, num_tests)
-radnom_multiple_test(simplex_list, vertices, num_trans, num_tests)
+radnom_multiple_test(simplex_list, vertices, num_trans, num_tests, num_vertices, num_edges)
 
 
 
