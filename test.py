@@ -7,7 +7,7 @@ Created on Fri Aug  5 18:27:25 2022
 import numpy as np
 import itertools
 import random
-
+import time
 
 import kruskal_dim0 as main
 from kruskal_dim0 import vertex
@@ -121,28 +121,65 @@ def radnom_multiple_test(simplex_list, vertices, num_trans, num_tests, num_verti
         else:
             print("True")
  
+
+
+def multiple_transpositions(simplex_list, vertices, num_trans):
+    times = []
+    positions = np.random.randint(0, len(simplex_list)-1, num_trans)
+    
+    barcode, data_history = main.kruskal_filtration(simplex_list, vertices)
+    barcode_vine, vine_data_history = barcode, data_history
+    
+    for position in positions:
         
-       
-num_edges = 50
-num_vertices = 10
-positions = [0]
-num_tests = 10000000
-num_trans = 100
+        # Checking if the switch follows the rules of filtrations
+        s1 = simplex_list[position]
+        s2 = simplex_list[position + 1]
+        if type(s1) == edge and type(s2) == vertex:
+            if s2 in s1.vertices:
+                #print("Transposition not allowed")
+                if len(positions) <=3:
+                    return True
+                continue
+        if type(s1) == vertex and type(s2) == edge:
+            if s1 in s2.vertices:
+                #print("Transposition not allowed")
+                if len(positions) <= 5:
+                    return True
+                continue  
+            
+        start = time.time()
+        barcode_vine, vine_data_history = main.transpose_barcode(simplex_list, barcode_vine, position, vine_data_history)
+        end = time.time()
+        print(end - start)  
+        times.append(end - start)
+        simplex_list_new, vertices_new = transposition(simplex_list, vertices, position)
+      
+    print(np.mean(times))
+    return times
+
+
+
+
+    
+num_edges = 99000
+num_vertices = 1000
 
 vertices = [vertex() for i in range(num_vertices)]
 edges = [edge(random.choice(vertices), random.choice(vertices)) for i in range(num_edges)]
-
 g = graph(vertices, edges)
 simplex_list = main.preprocess(g, random = 1)
 vertices.sort(key=lambda x: x.value, reverse=False)
 
+num_tests = 100
+num_trans = 1000
+
+#positions = np.random.randint(0, len(simplex_list)-1, num_trans)
+
+#radnom_multiple_test(simplex_list, vertices, num_trans, num_tests, num_vertices, num_edges)
 
 
-#print(test_multiple_transpositions(simplex_list, vertices, positions))
-#radnom_filtration_test(simplex_list, vertices, num_tests)
-radnom_multiple_test(simplex_list, vertices, num_trans, num_tests, num_vertices, num_edges)
-
-
+multiple_transpositions(simplex_list, vertices, num_trans)
 
 
 
