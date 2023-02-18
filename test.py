@@ -159,14 +159,12 @@ def multiple_transpositions(simplex_list, vertices, num_trans):
     return times
 
 
-
-
     
 num_edges = 99000
 num_vertices = 1000
 
-vertices = [vertex() for i in range(num_vertices)]
-edges = [edge(random.choice(vertices), random.choice(vertices)) for i in range(num_edges)]
+vertices = [vertex() for i in range(100)]
+edges = [edge(random.choice(vertices), random.choice(vertices)) for i in range(500)]
 g = graph(vertices, edges)
 simplex_list = main.preprocess(g, random = 1)
 vertices.sort(key=lambda x: x.value, reverse=False)
